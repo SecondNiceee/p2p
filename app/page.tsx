@@ -65,7 +65,7 @@ export default function Home() {
             `👤 Продавец: <b>${item.nickname}</b>\n` +
             `⭐ Уровень: ${item.merchantLevel}\n` +
             `✅ Онлайн: ${item.isOnline ? "Да" : "Нет"}\n` +
-            `🔗 <a href="https://t.me/WalletBot?start=p2p_sell_${item.id}">Перейти</a>\n\n` +
+            `🔗 <a href="https://t.me/wallet">Перейти</a>\n\n` +
             `Найдено объявлений: ${items.length}`
           : `💵 <b>АЛЕРТ ПРОДАЖИ (BUY объявление)</b>\n\n` +
             `💰 Цена: <b>${item.price} ${item.fiatCurrency}</b> (цель: ${targetPrice})\n` +
@@ -73,7 +73,7 @@ export default function Home() {
             `👤 Покупатель: <b>${item.nickname}</b>\n` +
             `⭐ Уровень: ${item.merchantLevel}\n` +
             `✅ Онлайн: ${item.isOnline ? "Да" : "Нет"}\n` +
-            `🔗 <a href="https://t.me/WalletBot?start=p2p_buy_${item.id}">Перейти</a>\n\n` +
+            `🔗 <a href="https://t.me/wallet">Перейти</a>\n\n` +
             `Найдено объявлений: ${items.length}`;
 
       await fetch("/api/telegram", {
