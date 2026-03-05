@@ -124,7 +124,7 @@ export default function Home() {
     } catch (e) {
       setError(String(e));
     }
-  }, [fiatCurrency, buyTargetPrice, sellTargetPrice]);
+  }, [fiatCurrency, buyTargetPrice, buyFiatAmount, sellTargetPrice, sellFiatAmount]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -168,8 +168,12 @@ export default function Home() {
           setFiatCurrency={setFiatCurrency}
           buyTargetPrice={buyTargetPrice}
           setBuyTargetPrice={setBuyTargetPrice}
+          buyFiatAmount={buyFiatAmount}
+          setBuyFiatAmount={setBuyFiatAmount}
           sellTargetPrice={sellTargetPrice}
           setSellTargetPrice={setSellTargetPrice}
+          sellFiatAmount={sellFiatAmount}
+          setSellFiatAmount={setSellFiatAmount}
           interval={interval}
           setInterval={setIntervalMs}
           isRunning={isRunning}
