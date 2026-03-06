@@ -22,6 +22,7 @@ type Props = {
   isRunning: boolean;
   setIsRunning: (v: boolean) => void;
   isAlerted: boolean;
+  onServerStatusChange?: (active: boolean) => void;
 };
 
 const FIAT_OPTIONS = ["RUB", "USD", "EUR", "KZT", "UAH", "UZS"];
@@ -52,50 +53,68 @@ export function ControlPanel({
   isRunning,
   setIsRunning,
   isAlerted,
+  onServerStatusChange,
 }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleToggleMonitoring = async () => {
+  // Сохранить настройки и запустить мониторинг на сервере
+  const handleSaveAndStart = async () => {
     try {
       setError(null);
       setIsLoading(true);
 
-      if (isRunning) {
-        // Stop monitoring
-        const res = await fetch("/api/monitoring/stop", { method: "POST" });
-        if (!res.ok) throw new Error("Failed to stop monitoring");
-        setIsRunning(false);
-      } else {
-        // Validate before starting
-        if (!buyTargetPrice && !sellTargetPrice) {
-          setError("Set at least one target price");
-          setIsLoading(false);
-          return;
-        }
-        // Start monitoring
-        const res = await fetch("/api/monitoring/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fiatCurrency,
-            buyTargetPrice: buyTargetPrice ? parseFloat(buyTargetPrice) : null,
-            buyFiatAmountMin: buyFiatAmountMin ? parseFloat(buyFiatAmountMin) : null,
-            buyFiatAmountMax: buyFiatAmountMax ? parseFloat(buyFiatAmountMax) : null,
-            sellTargetPrice: sellTargetPrice ? parseFloat(sellTargetPrice) : null,
-            sellFiatAmountMin: sellFiatAmountMin ? parseFloat(sellFiatAmountMin) : null,
-            sellFiatAmountMax: sellFiatAmountMax ? parseFloat(sellFiatAmountMax) : null,
-            interval_ms: interval,
-          }),
-        });
-        if (!res.ok) throw new Error("Failed to start monitoring");
-        setIsRunning(true);
+      // Validate before starting
+      if (!buyTargetPrice && !sellTargetPrice) {
+        setError("Set at least one target price");
+        setIsLoading(false);
+        return;
       }
+
+      // Start/update monitoring config in DB
+      const res = await fetch("/api/monitoring/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fiatCurrency,
+          buyTargetPrice: buyTargetPrice ? parseFloat(buyTargetPrice) : null,
+          buyFiatAmountMin: buyFiatAmountMin ? parseFloat(buyFiatAmountMin) : null,
+          buyFiatAmountMax: buyFiatAmountMax ? parseFloat(buyFiatAmountMax) : null,
+          sellTargetPrice: sellTargetPrice ? parseFloat(sellTargetPrice) : null,
+          sellFiatAmountMin: sellFiatAmountMin ? parseFloat(sellFiatAmountMin) : null,
+          sellFiatAmountMax: sellFiatAmountMax ? parseFloat(sellFiatAmountMax) : null,
+          interval_ms: interval,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save config");
+      setIsRunning(true);
+      onServerStatusChange?.(true);
     } catch (e) {
       setError(String(e));
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Полностью остановить мониторинг на сервере (is_active = false)
+  const handleStopServer = async () => {
+    try {
+      setError(null);
+      setIsLoading(true);
+      const res = await fetch("/api/monitoring/stop", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to stop server monitoring");
+      setIsRunning(false);
+      onServerStatusChange?.(false);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Остановить только локальный опрос (UI), сервер продолжает работать
+  const handleStopLocal = () => {
+    setIsRunning(false);
   };
 
   const cardClass = isAlerted
@@ -213,18 +232,40 @@ export function ControlPanel({
         {error && (
           <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">{error}</div>
         )}
-        <div className="flex justify-end">
-          <button
-            onClick={handleToggleMonitoring}
-            disabled={isLoading}
-            className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
-              isRunning
-                ? "bg-destructive text-white hover:bg-destructive/80"
-                : "bg-emerald-600 text-white hover:bg-emerald-500"
-            }`}
-          >
-            {isLoading ? "..." : isRunning ? "Stop Monitoring" : "Start Monitoring"}
-          </button>
+        <div className="flex justify-end gap-2">
+          {isRunning ? (
+            <>
+              <button
+                onClick={handleStopLocal}
+                disabled={isLoading}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              >
+                Скрыть опрос (UI)
+              </button>
+              <button
+                onClick={handleStopServer}
+                disabled={isLoading}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 bg-destructive text-white hover:bg-destructive/80"
+              >
+                {isLoading ? "..." : "Остановить сервер"}
+              </button>
+              <button
+                onClick={handleSaveAndStart}
+                disabled={isLoading}
+                className="rounded-lg px-4 py-2 text-sm font-semibold transition-all disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-500"
+              >
+                {isLoading ? "..." : "Обновить настройки"}
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleSaveAndStart}
+              disabled={isLoading}
+              className="rounded-lg px-6 py-2 text-sm font-semibold transition-all disabled:opacity-50 bg-emerald-600 text-white hover:bg-emerald-500"
+            >
+              {isLoading ? "..." : "Запустить мониторинг"}
+            </button>
+          )}
         </div>
       </div>
     </div>
