@@ -58,6 +58,17 @@ async function fetchP2PData(fiatCurrency: string, side: 'sell' | 'buy') {
     return null;
   }
 
+  const requestBody = {
+    fiatCurrency,
+    cryptoCurrency: 'USDT',
+    side,
+    pageSize: 20,
+    page: 0,
+  };
+
+  console.log('[Monitoring] P2P Request:', JSON.stringify(requestBody, null, 2));
+  console.log('[Monitoring] API Key (first 10 chars):', apiKey.substring(0, 10) + '...');
+
   try {
     const response = await fetch('https://p2p.walletbot.me/p2p/integration-api/v1/item/online', {
       method: 'POST',
@@ -66,21 +77,19 @@ async function fetchP2PData(fiatCurrency: string, side: 'sell' | 'buy') {
         'X-API-Key': apiKey,
         'Accept': 'application/json',
       },
-      body: JSON.stringify({
-        fiatCurrency,
-        cryptoCurrency: 'USDT',
-        side,
-        pageSize: 20,
-        page: 0,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
+    const responseText = await response.text();
+    console.log('[Monitoring] P2P Response Status:', response.status);
+    console.log('[Monitoring] P2P Response Body:', responseText);
+
     if (!response.ok) {
-      console.error('[Monitoring] P2P API error:', response.status);
+      console.error('[Monitoring] P2P API error:', response.status, responseText);
       return null;
     }
 
-    const data = await response.json();
+    const data = JSON.parse(responseText);
     console.log(`[Monitoring] Fetched ${side.toUpperCase()} data: ${data.items?.length || 0} items`);
     return data;
   } catch (error) {
