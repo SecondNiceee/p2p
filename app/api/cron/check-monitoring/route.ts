@@ -3,12 +3,29 @@ import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL!);
 
 async function sendTelegramAlert(message: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    console.error('Telegram credentials not configured');
+    return;
+  }
+
   try {
-    await fetch('/api/telegram', {
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        parse_mode: 'HTML',
+      }),
     });
+
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('Telegram API error:', errorData);
+    }
   } catch (error) {
     console.error('Failed to send Telegram alert:', error);
   }
