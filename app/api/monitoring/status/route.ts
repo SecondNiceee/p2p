@@ -18,9 +18,18 @@ export async function GET() {
     `;
 
     if (result.length === 0) {
+      // Return default config if none exists
       return new Response(
-        JSON.stringify({ error: 'Config not found' }),
-        { status: 404 }
+        JSON.stringify({
+          is_active: false,
+          fiat_currency: 'RUB',
+          buy_target_price: null,
+          buy_fiat_amount: null,
+          sell_target_price: null,
+          sell_fiat_amount: null,
+          interval_ms: 30000,
+        }),
+        { status: 200 }
       );
     }
 
@@ -28,8 +37,16 @@ export async function GET() {
   } catch (error) {
     console.error('Failed to get monitoring status:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to get status' }),
-      { status: 500 }
+      JSON.stringify({
+        is_active: false,
+        fiat_currency: 'RUB',
+        buy_target_price: null,
+        buy_fiat_amount: null,
+        sell_target_price: null,
+        sell_fiat_amount: null,
+        interval_ms: 30000,
+      }),
+      { status: 200 }
     );
   }
 }

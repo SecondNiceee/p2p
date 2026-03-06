@@ -51,6 +51,33 @@ export default function Home() {
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAlertTimeRef = useRef<{ buy: number; sell: number }>({ buy: 0, sell: 0 });
+  const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+
+  // Load monitoring status on page load
+  useEffect(() => {
+    async function loadMonitoringStatus() {
+      try {
+        const res = await fetch("/api/monitoring/status");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.is_active) {
+            setIsRunning(true);
+            if (data.fiat_currency) setFiatCurrency(data.fiat_currency);
+            if (data.buy_target_price) setBuyTargetPrice(String(data.buy_target_price));
+            if (data.buy_fiat_amount) setBuyFiatAmount(String(data.buy_fiat_amount));
+            if (data.sell_target_price) setSellTargetPrice(String(data.sell_target_price));
+            if (data.sell_fiat_amount) setSellFiatAmount(String(data.sell_fiat_amount));
+            if (data.interval_ms) setIntervalMs(data.interval_ms);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load monitoring status:", e);
+      } finally {
+        setIsLoadingStatus(false);
+      }
+    }
+    loadMonitoringStatus();
+  }, []);
 
   const sendTelegramAlert = useCallback(async (type: "BUY" | "SELL", items: OnlineItem[], targetPrice: string) => {
     try {
