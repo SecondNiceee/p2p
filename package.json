@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:server": "npx tsx server.ts",
     "build": "next build",
     "start": "next start",
+    "start:server": "node --import tsx server.ts",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -63,6 +65,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.0",
+    "tsx": "^4.19.0",
     "@types/node": "^22",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
