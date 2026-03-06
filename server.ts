@@ -15,6 +15,9 @@ const handle = app.getRequestHandler();
 
 const sql = neon(process.env.DATABASE_URL!);
 
+// Track current interval to restart when config changes
+let currentIntervalMs = 60000;
+
 async function sendTelegramAlert(message: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -46,6 +49,46 @@ async function sendTelegramAlert(message: string) {
   }
 }
 
+// Fetch P2P data from Wallet API (same as client uses)
+async function fetchP2PData(fiatCurrency: string, side: 'sell' | 'buy') {
+  const apiKey = process.env.P2P_API_KEY;
+  
+  if (!apiKey) {
+    console.error('[Monitoring] P2P_API_KEY not set');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://p2p.walletbot.me/p2p/integration-api/v1/item/online', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': apiKey,
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        fiatCurrency,
+        cryptoCurrency: 'USDT',
+        side,
+        pageSize: 20,
+        page: 0,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[Monitoring] P2P API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[Monitoring] Fetched ${side.toUpperCase()} data: ${data.items?.length || 0} items`);
+    return data;
+  } catch (error) {
+    console.error('[Monitoring] Error fetching P2P data:', error);
+    return null;
+  }
+}
+
 async function runMonitoringCheck() {
   console.log(`[Monitoring] Running check at ${new Date().toISOString()}`);
 
@@ -60,7 +103,8 @@ async function runMonitoringCheck() {
         buy_fiat_amount_max,
         sell_target_price,
         sell_fiat_amount_min,
-        sell_fiat_amount_max
+        sell_fiat_amount_max,
+        interval_ms
       FROM monitoring_config
       WHERE id = 1
     `;
@@ -75,113 +119,83 @@ async function runMonitoringCheck() {
       fiat: cfg.fiat_currency,
       buyTarget: cfg.buy_target_price,
       sellTarget: cfg.sell_target_price,
+      interval: cfg.interval_ms,
     });
 
-    // Fetch SELL ads (for BUY monitoring)
+    // Check if interval changed and needs restart
+    if (cfg.interval_ms && cfg.interval_ms !== currentIntervalMs) {
+      console.log(`[Monitoring] Interval changed from ${currentIntervalMs}ms to ${cfg.interval_ms}ms, will restart`);
+      currentIntervalMs = cfg.interval_ms;
+      restartMonitoringInterval();
+    }
+
+    // Fetch SELL ads (for BUY monitoring - user wants to buy, so looks at sell offers)
     if (cfg.buy_target_price) {
-      try {
-        const response = await fetch(
-          'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              page: 1,
-              rows: 20,
-              asset: 'USDT',
-              tradeType: 'SELL',
-              fiat: cfg.fiat_currency,
-              publisherType: null,
-            }),
-          }
-        );
-        const data = await response.json();
+      const data = await fetchP2PData(cfg.fiat_currency, 'sell');
+      
+      if (data?.items) {
+        for (const item of data.items) {
+          const price = parseFloat(item.price);
+          const adMin = parseFloat(item.minDealAmount || '0');
+          const adMax = parseFloat(item.maxDealAmount || '999999999');
 
-        if (data.data) {
-          for (const item of data.data) {
-            const price = parseFloat(item.adv.price);
-            const adMin = parseFloat(item.adv.minSingleTransAmount);
-            const adMax = parseFloat(item.adv.maxSingleTransAmount);
+          // Check if our range intersects with ad's range
+          const ourMin = cfg.buy_fiat_amount_min ? parseFloat(cfg.buy_fiat_amount_min) : 0;
+          const ourMax = cfg.buy_fiat_amount_max ? parseFloat(cfg.buy_fiat_amount_max) : Infinity;
+          const withinRange = !(ourMax < adMin || ourMin > adMax);
 
-            // Check if our range intersects with ad's range
-            const ourMin = cfg.buy_fiat_amount_min ? parseFloat(cfg.buy_fiat_amount_min) : 0;
-            const ourMax = cfg.buy_fiat_amount_max ? parseFloat(cfg.buy_fiat_amount_max) : Infinity;
-            const withinRange = !(ourMax < adMin || ourMin > adMax);
+          if (price <= cfg.buy_target_price && withinRange) {
+            const message =
+              `🛍️ <b>АЛЕРТ ПОКУПКИ</b>\n\n` +
+              `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≤${cfg.buy_target_price})\n` +
+              `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
+              `👤 Продавец: <b>${item.user?.nickname || 'Unknown'}</b>\n` +
+              `⭐ Сделок: ${item.user?.totalDeals || 0}\n` +
+              `✅ Онлайн: ${item.user?.online ? 'Да' : 'Нет'}`;
 
-            if (price <= cfg.buy_target_price && withinRange) {
-              const message =
-                `🛍️ <b>АЛЕРТ ПОКУПКИ</b>\n\n` +
-                `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≤${cfg.buy_target_price})\n` +
-                `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
-                `👤 Продавец: <b>${item.advertiser.nickName}</b>\n` +
-                `⭐ Рейтинг: ${(parseFloat(item.advertiser.monthFinishRate) * 100).toFixed(1)}%\n` +
-                `✅ Онлайн: ${item.advertiser.userNo ? 'Да' : 'Нет'}`;
+            await sendTelegramAlert(message);
 
-              await sendTelegramAlert(message);
-
-              await sql`
-                INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
-                VALUES ('BUY', ${price}, ${cfg.buy_target_price}, ${item.advertiser.nickName}, ${adMin}, ${adMax}, ${item.advertiser.monthFinishRate}, 1)
-              `;
-            }
+            await sql`
+              INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
+              VALUES ('BUY', ${price}, ${cfg.buy_target_price}, ${item.user?.nickname || 'Unknown'}, ${adMin}, ${adMax}, ${item.user?.totalDeals || 0}, 1)
+            `;
           }
         }
-      } catch (error) {
-        console.error('[Monitoring] Error fetching SELL ads:', error);
       }
     }
 
-    // Fetch BUY ads (for SELL monitoring)
+    // Fetch BUY ads (for SELL monitoring - user wants to sell, so looks at buy offers)
     if (cfg.sell_target_price) {
-      try {
-        const response = await fetch(
-          'https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              page: 1,
-              rows: 20,
-              asset: 'USDT',
-              tradeType: 'BUY',
-              fiat: cfg.fiat_currency,
-              publisherType: null,
-            }),
-          }
-        );
-        const data = await response.json();
+      const data = await fetchP2PData(cfg.fiat_currency, 'buy');
+      
+      if (data?.items) {
+        for (const item of data.items) {
+          const price = parseFloat(item.price);
+          const adMin = parseFloat(item.minDealAmount || '0');
+          const adMax = parseFloat(item.maxDealAmount || '999999999');
 
-        if (data.data) {
-          for (const item of data.data) {
-            const price = parseFloat(item.adv.price);
-            const adMin = parseFloat(item.adv.minSingleTransAmount);
-            const adMax = parseFloat(item.adv.maxSingleTransAmount);
+          // Check if our range intersects with ad's range
+          const ourMin = cfg.sell_fiat_amount_min ? parseFloat(cfg.sell_fiat_amount_min) : 0;
+          const ourMax = cfg.sell_fiat_amount_max ? parseFloat(cfg.sell_fiat_amount_max) : Infinity;
+          const withinRange = !(ourMax < adMin || ourMin > adMax);
 
-            // Check if our range intersects with ad's range
-            const ourMin = cfg.sell_fiat_amount_min ? parseFloat(cfg.sell_fiat_amount_min) : 0;
-            const ourMax = cfg.sell_fiat_amount_max ? parseFloat(cfg.sell_fiat_amount_max) : Infinity;
-            const withinRange = !(ourMax < adMin || ourMin > adMax);
+          if (price >= cfg.sell_target_price && withinRange) {
+            const message =
+              `💵 <b>АЛЕРТ ПРОДАЖИ</b>\n\n` +
+              `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≥${cfg.sell_target_price})\n` +
+              `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
+              `👤 Покупатель: <b>${item.user?.nickname || 'Unknown'}</b>\n` +
+              `⭐ Сделок: ${item.user?.totalDeals || 0}\n` +
+              `✅ Онлайн: ${item.user?.online ? 'Да' : 'Нет'}`;
 
-            if (price >= cfg.sell_target_price && withinRange) {
-              const message =
-                `💵 <b>АЛЕРТ ПРОДАЖИ</b>\n\n` +
-                `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≥${cfg.sell_target_price})\n` +
-                `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
-                `👤 Покупатель: <b>${item.advertiser.nickName}</b>\n` +
-                `⭐ Рейтинг: ${(parseFloat(item.advertiser.monthFinishRate) * 100).toFixed(1)}%\n` +
-                `✅ Онлайн: ${item.advertiser.userNo ? 'Да' : 'Нет'}`;
+            await sendTelegramAlert(message);
 
-              await sendTelegramAlert(message);
-
-              await sql`
-                INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
-                VALUES ('SELL', ${price}, ${cfg.sell_target_price}, ${item.advertiser.nickName}, ${adMin}, ${adMax}, ${item.advertiser.monthFinishRate}, 1)
-              `;
-            }
+            await sql`
+              INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
+              VALUES ('SELL', ${price}, ${cfg.sell_target_price}, ${item.user?.nickname || 'Unknown'}, ${adMin}, ${adMax}, ${item.user?.totalDeals || 0}, 1)
+            `;
           }
         }
-      } catch (error) {
-        console.error('[Monitoring] Error fetching BUY ads:', error);
       }
     }
 
@@ -202,6 +216,36 @@ async function runMonitoringCheck() {
 
 let monitoringInterval: NodeJS.Timeout | null = null;
 
+function restartMonitoringInterval() {
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval);
+  }
+  console.log(`[Monitoring] Starting interval: ${currentIntervalMs}ms`);
+  monitoringInterval = setInterval(runMonitoringCheck, currentIntervalMs);
+}
+
+async function initMonitoring() {
+  // Get initial interval from database
+  try {
+    const config = await sql`
+      SELECT interval_ms FROM monitoring_config WHERE id = 1
+    `;
+    if (config.length && config[0].interval_ms) {
+      currentIntervalMs = config[0].interval_ms;
+    }
+  } catch (error) {
+    console.log('[Monitoring] Could not load initial config, using default interval');
+  }
+
+  console.log(`[Monitoring] Starting with interval: ${currentIntervalMs}ms`);
+
+  // Run immediately on startup
+  runMonitoringCheck();
+
+  // Then run on interval
+  restartMonitoringInterval();
+}
+
 app.prepare().then(() => {
   createServer(async (req, res) => {
     try {
@@ -215,15 +259,8 @@ app.prepare().then(() => {
   }).listen(port, () => {
     console.log(`> Ready on http://${hostname}:${port}`);
 
-    // Start monitoring interval (every 60 seconds)
-    const intervalMs = parseInt(process.env.MONITORING_INTERVAL || '60000', 10);
-    console.log(`[Monitoring] Starting with interval: ${intervalMs}ms`);
-
-    // Run immediately on startup
-    runMonitoringCheck();
-
-    // Then run on interval
-    monitoringInterval = setInterval(runMonitoringCheck, intervalMs);
+    // Initialize monitoring
+    initMonitoring();
   });
 });
 
