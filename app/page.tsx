@@ -54,6 +54,7 @@ export default function Home() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAlertTimeRef = useRef<{ buy: number; sell: number }>({ buy: 0, sell: 0 });
   const [isLoadingStatus, setIsLoadingStatus] = useState(true);
+  const [serverMonitoringActive, setServerMonitoringActive] = useState(false);
 
   // Load monitoring status on page load
   useEffect(() => {
@@ -62,16 +63,22 @@ export default function Home() {
         const res = await fetch("/api/monitoring/status");
         if (res.ok) {
           const data = await res.json();
+          // Загружаем настройки из БД
+          if (data.fiat_currency) setFiatCurrency(data.fiat_currency);
+          if (data.buy_target_price) setBuyTargetPrice(String(data.buy_target_price));
+          if (data.buy_fiat_amount_min) setBuyFiatAmountMin(String(data.buy_fiat_amount_min));
+          if (data.buy_fiat_amount_max) setBuyFiatAmountMax(String(data.buy_fiat_amount_max));
+          if (data.sell_target_price) setSellTargetPrice(String(data.sell_target_price));
+          if (data.sell_fiat_amount_min) setSellFiatAmountMin(String(data.sell_fiat_amount_min));
+          if (data.sell_fiat_amount_max) setSellFiatAmountMax(String(data.sell_fiat_amount_max));
+          if (data.interval_ms) setIntervalMs(data.interval_ms);
+          
+          // Отображаем статус сервера
+          setServerMonitoringActive(data.is_active === true);
+          
+          // Автоматически запускаем локальный опрос если сервер активен
           if (data.is_active) {
             setIsRunning(true);
-            if (data.fiat_currency) setFiatCurrency(data.fiat_currency);
-            if (data.buy_target_price) setBuyTargetPrice(String(data.buy_target_price));
-            if (data.buy_fiat_amount_min) setBuyFiatAmountMin(String(data.buy_fiat_amount_min));
-            if (data.buy_fiat_amount_max) setBuyFiatAmountMax(String(data.buy_fiat_amount_max));
-            if (data.sell_target_price) setSellTargetPrice(String(data.sell_target_price));
-            if (data.sell_fiat_amount_min) setSellFiatAmountMin(String(data.sell_fiat_amount_min));
-            if (data.sell_fiat_amount_max) setSellFiatAmountMax(String(data.sell_fiat_amount_max));
-            if (data.interval_ms) setIntervalMs(data.interval_ms);
           }
         }
       } catch (e) {
@@ -249,11 +256,19 @@ export default function Home() {
               WalletBot P2P Market — real-time price tracker
             </p>
           </div>
-          {lastUpdated && (
-            <span className={`text-xs ${isAlerted ? "text-alert-foreground/60" : "text-muted-foreground"}`}>
-              Updated: {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex h-2 w-2 rounded-full ${serverMonitoringActive ? "bg-emerald-500" : "bg-red-500"}`} />
+              <span className={`text-xs font-medium ${isAlerted ? "text-alert-foreground/80" : "text-muted-foreground"}`}>
+                Сервер: {serverMonitoringActive ? "Активен" : "Остановлен"}
+              </span>
+            </div>
+            {lastUpdated && (
+              <span className={`text-xs ${isAlerted ? "text-alert-foreground/60" : "text-muted-foreground"}`}>
+                Updated: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
         </header>
 
         <ControlPanel
@@ -276,6 +291,7 @@ export default function Home() {
           isRunning={isRunning}
           setIsRunning={setIsRunning}
           isAlerted={isAlerted}
+          onServerStatusChange={setServerMonitoringActive}
         />
 
         {error && (
