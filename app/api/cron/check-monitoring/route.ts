@@ -44,9 +44,11 @@ export async function GET(request: Request) {
         is_active,
         fiat_currency,
         buy_target_price,
-        buy_fiat_amount,
+        buy_fiat_amount_min,
+        buy_fiat_amount_max,
         sell_target_price,
-        sell_fiat_amount
+        sell_fiat_amount_min,
+        sell_fiat_amount_max
       FROM monitoring_config
       WHERE id = 1
     `;
@@ -71,9 +73,14 @@ export async function GET(request: Request) {
             const minAmount = parseFloat(item.adv.minSingleTransactionAmountUsd);
             const maxAmount = parseFloat(item.adv.maxSingleTransactionAmountUsd);
 
-            const amount = cfg.buy_fiat_amount ? parseFloat(cfg.buy_fiat_amount) : null;
+            const userMin = cfg.buy_fiat_amount_min ? parseFloat(cfg.buy_fiat_amount_min) : null;
+            const userMax = cfg.buy_fiat_amount_max ? parseFloat(cfg.buy_fiat_amount_max) : null;
 
-            const withinRange = !amount || (amount >= minAmount && amount <= maxAmount);
+            const withinRange = 
+              (!userMin && !userMax) || 
+              (userMin && userMax && minAmount <= userMax && maxAmount >= userMin) ||
+              (userMin && !userMax && maxAmount >= userMin) ||
+              (!userMin && userMax && minAmount <= userMax);
 
             if (price <= cfg.buy_target_price && withinRange) {
               const message =
@@ -114,9 +121,14 @@ export async function GET(request: Request) {
             const minAmount = parseFloat(item.adv.minSingleTransactionAmountUsd);
             const maxAmount = parseFloat(item.adv.maxSingleTransactionAmountUsd);
 
-            const amount = cfg.sell_fiat_amount ? parseFloat(cfg.sell_fiat_amount) : null;
+            const userMin = cfg.sell_fiat_amount_min ? parseFloat(cfg.sell_fiat_amount_min) : null;
+            const userMax = cfg.sell_fiat_amount_max ? parseFloat(cfg.sell_fiat_amount_max) : null;
 
-            const withinRange = !amount || (amount >= minAmount && amount <= maxAmount);
+            const withinRange = 
+              (!userMin && !userMax) || 
+              (userMin && userMax && minAmount <= userMax && maxAmount >= userMin) ||
+              (userMin && !userMax && maxAmount >= userMin) ||
+              (!userMin && userMax && minAmount <= userMax);
 
             if (price >= cfg.sell_target_price && withinRange) {
               const message =
