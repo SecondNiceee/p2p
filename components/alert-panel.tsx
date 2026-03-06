@@ -22,8 +22,8 @@ export function AlertPanel({ type, items, targetPrice, fiatCurrency }: Props) {
       </div>
       <p className="text-sm text-emerald-200 mb-4">
         {isBuy
-          ? `Найдено ${items.length} BUY объявлений с ценой ≤ ${targetPrice} ${fiatCurrency} — можно продать`
-          : `Найдено ${items.length} SELL объявлений с ценой ≥ ${targetPrice} ${fiatCurrency} — можно купить`}
+          ? `Найдено ${items.length} BUY объявлений с ценой ≥ ${targetPrice} ${fiatCurrency} — можно продать`
+          : `Найдено ${items.length} SELL объявлений с ценой ≤ ${targetPrice} ${fiatCurrency} — можно купить`}
       </p>
       <div className="flex flex-col gap-2">
         {items.map((item) => (

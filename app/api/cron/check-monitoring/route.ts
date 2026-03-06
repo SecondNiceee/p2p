@@ -44,9 +44,12 @@ export async function GET(request: Request) {
         is_active,
         fiat_currency,
         buy_target_price,
-        buy_fiat_amount,
+        buy_fiat_amount_min,
+        buy_fiat_amount_max,
         sell_target_price,
-        sell_fiat_amount
+        sell_fiat_amount_min,
+        sell_fiat_amount_max,
+        interval_ms
       FROM monitoring_config
       WHERE id = 1
     `;
@@ -68,12 +71,19 @@ export async function GET(request: Request) {
         if (data.data) {
           for (const item of data.data) {
             const price = parseFloat(item.adv.price);
-            const minAmount = parseFloat(item.adv.minSingleTransactionAmountUsd);
-            const maxAmount = parseFloat(item.adv.maxSingleTransactionAmountUsd);
+            const adMin = parseFloat(item.adv.minSingleTransactionAmountUsd);
+            const adMax = parseFloat(item.adv.maxSingleTransactionAmountUsd);
 
-            const amount = cfg.buy_fiat_amount ? parseFloat(cfg.buy_fiat_amount) : null;
+            const userMin = cfg.buy_fiat_amount_min ? parseFloat(cfg.buy_fiat_amount_min) : null;
+            const userMax = cfg.buy_fiat_amount_max ? parseFloat(cfg.buy_fiat_amount_max) : null;
 
-            const withinRange = !amount || (amount >= minAmount && amount <= maxAmount);
+            // Check overlap between user range and ad range
+            let withinRange = true;
+            if (userMin !== null || userMax !== null) {
+              const effectiveUserMin = userMin ?? 0;
+              const effectiveUserMax = userMax ?? Infinity;
+              withinRange = !(effectiveUserMax < adMin || effectiveUserMin > adMax);
+            }
 
             if (price <= cfg.buy_target_price && withinRange) {
               const message =
@@ -111,12 +121,18 @@ export async function GET(request: Request) {
         if (data.data) {
           for (const item of data.data) {
             const price = parseFloat(item.adv.price);
-            const minAmount = parseFloat(item.adv.minSingleTransactionAmountUsd);
-            const maxAmount = parseFloat(item.adv.maxSingleTransactionAmountUsd);
+            const adMin = parseFloat(item.adv.minSingleTransactionAmountUsd);
+            const adMax = parseFloat(item.adv.maxSingleTransactionAmountUsd);
 
-            const amount = cfg.sell_fiat_amount ? parseFloat(cfg.sell_fiat_amount) : null;
+            const userMin = cfg.sell_fiat_amount_min ? parseFloat(cfg.sell_fiat_amount_min) : null;
+            const userMax = cfg.sell_fiat_amount_max ? parseFloat(cfg.sell_fiat_amount_max) : null;
 
-            const withinRange = !amount || (amount >= minAmount && amount <= maxAmount);
+            let withinRange = true;
+            if (userMin !== null || userMax !== null) {
+              const effectiveUserMin = userMin ?? 0;
+              const effectiveUserMax = userMax ?? Infinity;
+              withinRange = !(effectiveUserMax < adMin || effectiveUserMin > adMax);
+            }
 
             if (price >= cfg.sell_target_price && withinRange) {
               const message =
