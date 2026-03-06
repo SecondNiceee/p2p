@@ -7,16 +7,12 @@ type Props = {
   setFiatCurrency: (v: string) => void;
   buyTargetPrice: string;
   setBuyTargetPrice: (v: string) => void;
-  buyFiatAmountMin: string;
-  setBuyFiatAmountMin: (v: string) => void;
-  buyFiatAmountMax: string;
-  setBuyFiatAmountMax: (v: string) => void;
+  buyFiatAmount: string;
+  setBuyFiatAmount: (v: string) => void;
   sellTargetPrice: string;
   setSellTargetPrice: (v: string) => void;
-  sellFiatAmountMin: string;
-  setSellFiatAmountMin: (v: string) => void;
-  sellFiatAmountMax: string;
-  setSellFiatAmountMax: (v: string) => void;
+  sellFiatAmount: string;
+  setSellFiatAmount: (v: string) => void;
   interval: number;
   setInterval: (v: number) => void;
   isRunning: boolean;
@@ -37,16 +33,12 @@ export function ControlPanel({
   setFiatCurrency,
   buyTargetPrice,
   setBuyTargetPrice,
-  buyFiatAmountMin,
-  setBuyFiatAmountMin,
-  buyFiatAmountMax,
-  setBuyFiatAmountMax,
+  buyFiatAmount,
+  setBuyFiatAmount,
   sellTargetPrice,
   setSellTargetPrice,
-  sellFiatAmountMin,
-  setSellFiatAmountMin,
-  sellFiatAmountMax,
-  setSellFiatAmountMax,
+  sellFiatAmount,
+  setSellFiatAmount,
   interval,
   setInterval,
   isRunning,
@@ -80,11 +72,9 @@ export function ControlPanel({
           body: JSON.stringify({
             fiatCurrency,
             buyTargetPrice: buyTargetPrice ? parseFloat(buyTargetPrice) : null,
-            buyFiatAmountMin: buyFiatAmountMin ? parseFloat(buyFiatAmountMin) : null,
-            buyFiatAmountMax: buyFiatAmountMax ? parseFloat(buyFiatAmountMax) : null,
+            buyFiatAmount: buyFiatAmount ? parseFloat(buyFiatAmount) : null,
             sellTargetPrice: sellTargetPrice ? parseFloat(sellTargetPrice) : null,
-            sellFiatAmountMin: sellFiatAmountMin ? parseFloat(sellFiatAmountMin) : null,
-            sellFiatAmountMax: sellFiatAmountMax ? parseFloat(sellFiatAmountMax) : null,
+            sellFiatAmount: sellFiatAmount ? parseFloat(sellFiatAmount) : null,
             interval_ms: interval,
           }),
         });
@@ -109,7 +99,7 @@ export function ControlPanel({
 
   return (
     <div className={cardClass}>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
           <label className={labelClass}>Fiat currency</label>
           <select
@@ -137,23 +127,12 @@ export function ControlPanel({
         </div>
 
         <div>
-          <label className={labelClass}>Сумма покупки - От ({fiatCurrency})</label>
-          <input
-            type="number"
-            placeholder="напр. 1000"
-            value={buyFiatAmountMin}
-            onChange={(e) => setBuyFiatAmountMin(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Сумма покупки - До ({fiatCurrency})</label>
+          <label className={labelClass}>Сумма покупки ({fiatCurrency})</label>
           <input
             type="number"
             placeholder="напр. 5000"
-            value={buyFiatAmountMax}
-            onChange={(e) => setBuyFiatAmountMax(e.target.value)}
+            value={buyFiatAmount}
+            onChange={(e) => setBuyFiatAmount(e.target.value)}
             className={inputClass}
           />
         </div>
@@ -170,29 +149,18 @@ export function ControlPanel({
         </div>
 
         <div>
-          <label className={labelClass}>Сумма продажи - От ({fiatCurrency})</label>
-          <input
-            type="number"
-            placeholder="напр. 1000"
-            value={sellFiatAmountMin}
-            onChange={(e) => setSellFiatAmountMin(e.target.value)}
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Сумма продажи - До ({fiatCurrency})</label>
+          <label className={labelClass}>Сумма продажи ({fiatCurrency})</label>
           <input
             type="number"
             placeholder="напр. 5000"
-            value={sellFiatAmountMax}
-            onChange={(e) => setSellFiatAmountMax(e.target.value)}
+            value={sellFiatAmount}
+            onChange={(e) => setSellFiatAmount(e.target.value)}
             className={inputClass}
           />
         </div>
 
         <div>
-          <label className={labelClass}>Интервал проверки</label>
+          <label className={labelClass}>Poll interval</label>
           <div className="flex gap-1">
             {INTERVAL_OPTIONS.map((opt) => (
               <button

@@ -29,11 +29,9 @@ export type OnlineItem = {
 export default function Home() {
   const [fiatCurrency, setFiatCurrency] = useState("RUB");
   const [buyTargetPrice, setBuyTargetPrice] = useState("");
-  const [buyFiatAmountMin, setBuyFiatAmountMin] = useState("");
-  const [buyFiatAmountMax, setBuyFiatAmountMax] = useState("");
+  const [buyFiatAmount, setBuyFiatAmount] = useState("");
   const [sellTargetPrice, setSellTargetPrice] = useState("");
-  const [sellFiatAmountMin, setSellFiatAmountMin] = useState("");
-  const [sellFiatAmountMax, setSellFiatAmountMax] = useState("");
+  const [sellFiatAmount, setSellFiatAmount] = useState("");
   const [interval, setIntervalMs] = useState(5000);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -66,11 +64,9 @@ export default function Home() {
             setIsRunning(true);
             if (data.fiat_currency) setFiatCurrency(data.fiat_currency);
             if (data.buy_target_price) setBuyTargetPrice(String(data.buy_target_price));
-            if (data.buy_fiat_amount_min) setBuyFiatAmountMin(String(data.buy_fiat_amount_min));
-            if (data.buy_fiat_amount_max) setBuyFiatAmountMax(String(data.buy_fiat_amount_max));
+            if (data.buy_fiat_amount) setBuyFiatAmount(String(data.buy_fiat_amount));
             if (data.sell_target_price) setSellTargetPrice(String(data.sell_target_price));
-            if (data.sell_fiat_amount_min) setSellFiatAmountMin(String(data.sell_fiat_amount_min));
-            if (data.sell_fiat_amount_max) setSellFiatAmountMax(String(data.sell_fiat_amount_max));
+            if (data.sell_fiat_amount) setSellFiatAmount(String(data.sell_fiat_amount));
             if (data.interval_ms) setIntervalMs(data.interval_ms);
           }
         }
@@ -143,21 +139,13 @@ export default function Home() {
         setSellAds(sellData.data);
         if (buyTargetPrice) {
           const target = parseFloat(buyTargetPrice);
-          const userMin = buyFiatAmountMin ? parseFloat(buyFiatAmountMin) : null;
-          const userMax = buyFiatAmountMax ? parseFloat(buyFiatAmountMax) : null;
+          const amount = buyFiatAmount ? parseFloat(buyFiatAmount) : null;
           const matched = sellData.data.filter((item: OnlineItem) => {
             if (parseFloat(item.price) > target) return false;
-            if (userMin !== null || userMax !== null) {
+            if (amount !== null) {
               const min = parseFloat(item.minAmount);
               const max = item.maxAmount ? parseFloat(item.maxAmount) : Infinity;
-              // Check if ad amount range overlaps with user's range
-              if (userMin && userMax) {
-                if (max < userMin || min > userMax) return false;
-              } else if (userMin) {
-                if (max < userMin) return false;
-              } else if (userMax) {
-                if (min > userMax) return false;
-              }
+              if (amount < min || amount > max) return false;
             }
             return true;
           });
@@ -183,21 +171,13 @@ export default function Home() {
         setBuyAds(buyData.data);
         if (sellTargetPrice) {
           const target = parseFloat(sellTargetPrice);
-          const userMin = sellFiatAmountMin ? parseFloat(sellFiatAmountMin) : null;
-          const userMax = sellFiatAmountMax ? parseFloat(sellFiatAmountMax) : null;
+          const amount = sellFiatAmount ? parseFloat(sellFiatAmount) : null;
           const matched = buyData.data.filter((item: OnlineItem) => {
             if (parseFloat(item.price) < target) return false;
-            if (userMin !== null || userMax !== null) {
+            if (amount !== null) {
               const min = parseFloat(item.minAmount);
               const max = item.maxAmount ? parseFloat(item.maxAmount) : Infinity;
-              // Check if ad amount range overlaps with user's range
-              if (userMin && userMax) {
-                if (max < userMin || min > userMax) return false;
-              } else if (userMin) {
-                if (max < userMin) return false;
-              } else if (userMax) {
-                if (min > userMax) return false;
-              }
+              if (amount < min || amount > max) return false;
             }
             return true;
           });
@@ -224,7 +204,7 @@ export default function Home() {
     } catch (e) {
       setError(String(e));
     }
-  }, [fiatCurrency, buyTargetPrice, buyFiatAmountMin, buyFiatAmountMax, sellTargetPrice, sellFiatAmountMin, sellFiatAmountMax, sendTelegramAlert]);
+  }, [fiatCurrency, buyTargetPrice, buyFiatAmount, sellTargetPrice, sellFiatAmount, sendTelegramAlert]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -268,16 +248,12 @@ export default function Home() {
           setFiatCurrency={setFiatCurrency}
           buyTargetPrice={buyTargetPrice}
           setBuyTargetPrice={setBuyTargetPrice}
-          buyFiatAmountMin={buyFiatAmountMin}
-          setBuyFiatAmountMin={setBuyFiatAmountMin}
-          buyFiatAmountMax={buyFiatAmountMax}
-          setBuyFiatAmountMax={setBuyFiatAmountMax}
+          buyFiatAmount={buyFiatAmount}
+          setBuyFiatAmount={setBuyFiatAmount}
           sellTargetPrice={sellTargetPrice}
           setSellTargetPrice={setSellTargetPrice}
-          sellFiatAmountMin={sellFiatAmountMin}
-          setSellFiatAmountMin={setSellFiatAmountMin}
-          sellFiatAmountMax={sellFiatAmountMax}
-          setSellFiatAmountMax={setSellFiatAmountMax}
+          sellFiatAmount={sellFiatAmount}
+          setSellFiatAmount={setSellFiatAmount}
           interval={interval}
           setInterval={setIntervalMs}
           isRunning={isRunning}

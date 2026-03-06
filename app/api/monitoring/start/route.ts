@@ -7,11 +7,9 @@ export async function POST(request: Request) {
     const {
       fiatCurrency,
       buyTargetPrice,
-      buyFiatAmountMin,
-      buyFiatAmountMax,
+      buyFiatAmount,
       sellTargetPrice,
-      sellFiatAmountMin,
-      sellFiatAmountMax,
+      sellFiatAmount,
       interval_ms,
     } = await request.json();
 
@@ -28,8 +26,8 @@ export async function POST(request: Request) {
     
     if (existing.length === 0) {
       await sql`
-        INSERT INTO monitoring_config (id, is_active, fiat_currency, buy_target_price, buy_fiat_amount_min, buy_fiat_amount_max, sell_target_price, sell_fiat_amount_min, sell_fiat_amount_max, interval_ms)
-        VALUES (1, true, ${fiatCurrency || 'RUB'}, ${buyTargetPrice || null}, ${buyFiatAmountMin || null}, ${buyFiatAmountMax || null}, ${sellTargetPrice || null}, ${sellFiatAmountMin || null}, ${sellFiatAmountMax || null}, ${interval_ms || 30000})
+        INSERT INTO monitoring_config (id, is_active, fiat_currency, buy_target_price, buy_fiat_amount, sell_target_price, sell_fiat_amount, interval_ms)
+        VALUES (1, true, ${fiatCurrency || 'RUB'}, ${buyTargetPrice || null}, ${buyFiatAmount || null}, ${sellTargetPrice || null}, ${sellFiatAmount || null}, ${interval_ms || 30000})
       `;
     } else {
       await sql`
@@ -38,11 +36,9 @@ export async function POST(request: Request) {
           is_active = true,
           fiat_currency = ${fiatCurrency || 'RUB'},
           buy_target_price = ${buyTargetPrice || null},
-          buy_fiat_amount_min = ${buyFiatAmountMin || null},
-          buy_fiat_amount_max = ${buyFiatAmountMax || null},
+          buy_fiat_amount = ${buyFiatAmount || null},
           sell_target_price = ${sellTargetPrice || null},
-          sell_fiat_amount_min = ${sellFiatAmountMin || null},
-          sell_fiat_amount_max = ${sellFiatAmountMax || null},
+          sell_fiat_amount = ${sellFiatAmount || null},
           interval_ms = ${interval_ms || 30000},
           updated_at = NOW()
         WHERE id = 1
