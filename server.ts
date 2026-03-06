@@ -56,9 +56,11 @@ async function runMonitoringCheck() {
         is_active,
         fiat_currency,
         buy_target_price,
-        buy_fiat_amount,
+        buy_fiat_amount_min,
+        buy_fiat_amount_max,
         sell_target_price,
-        sell_fiat_amount
+        sell_fiat_amount_min,
+        sell_fiat_amount_max
       FROM monitoring_config
       WHERE id = 1
     `;
@@ -98,17 +100,19 @@ async function runMonitoringCheck() {
         if (data.data) {
           for (const item of data.data) {
             const price = parseFloat(item.adv.price);
-            const minAmount = parseFloat(item.adv.minSingleTransAmount);
-            const maxAmount = parseFloat(item.adv.maxSingleTransAmount);
+            const adMin = parseFloat(item.adv.minSingleTransAmount);
+            const adMax = parseFloat(item.adv.maxSingleTransAmount);
 
-            const amount = cfg.buy_fiat_amount ? parseFloat(cfg.buy_fiat_amount) : null;
-            const withinRange = !amount || (amount >= minAmount && amount <= maxAmount);
+            // Check if our range intersects with ad's range
+            const ourMin = cfg.buy_fiat_amount_min ? parseFloat(cfg.buy_fiat_amount_min) : 0;
+            const ourMax = cfg.buy_fiat_amount_max ? parseFloat(cfg.buy_fiat_amount_max) : Infinity;
+            const withinRange = !(ourMax < adMin || ourMin > adMax);
 
             if (price <= cfg.buy_target_price && withinRange) {
               const message =
                 `🛍️ <b>АЛЕРТ ПОКУПКИ</b>\n\n` +
-                `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ${cfg.buy_target_price})\n` +
-                `🪙 Мин: ${minAmount} | Макс: ${maxAmount}\n` +
+                `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≤${cfg.buy_target_price})\n` +
+                `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
                 `👤 Продавец: <b>${item.advertiser.nickName}</b>\n` +
                 `⭐ Рейтинг: ${(parseFloat(item.advertiser.monthFinishRate) * 100).toFixed(1)}%\n` +
                 `✅ Онлайн: ${item.advertiser.userNo ? 'Да' : 'Нет'}`;
@@ -117,7 +121,7 @@ async function runMonitoringCheck() {
 
               await sql`
                 INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
-                VALUES ('BUY', ${price}, ${cfg.buy_target_price}, ${item.advertiser.nickName}, ${minAmount}, ${maxAmount}, ${item.advertiser.monthFinishRate}, 1)
+                VALUES ('BUY', ${price}, ${cfg.buy_target_price}, ${item.advertiser.nickName}, ${adMin}, ${adMax}, ${item.advertiser.monthFinishRate}, 1)
               `;
             }
           }
@@ -150,17 +154,19 @@ async function runMonitoringCheck() {
         if (data.data) {
           for (const item of data.data) {
             const price = parseFloat(item.adv.price);
-            const minAmount = parseFloat(item.adv.minSingleTransAmount);
-            const maxAmount = parseFloat(item.adv.maxSingleTransAmount);
+            const adMin = parseFloat(item.adv.minSingleTransAmount);
+            const adMax = parseFloat(item.adv.maxSingleTransAmount);
 
-            const amount = cfg.sell_fiat_amount ? parseFloat(cfg.sell_fiat_amount) : null;
-            const withinRange = !amount || (amount >= minAmount && amount <= maxAmount);
+            // Check if our range intersects with ad's range
+            const ourMin = cfg.sell_fiat_amount_min ? parseFloat(cfg.sell_fiat_amount_min) : 0;
+            const ourMax = cfg.sell_fiat_amount_max ? parseFloat(cfg.sell_fiat_amount_max) : Infinity;
+            const withinRange = !(ourMax < adMin || ourMin > adMax);
 
             if (price >= cfg.sell_target_price && withinRange) {
               const message =
                 `💵 <b>АЛЕРТ ПРОДАЖИ</b>\n\n` +
-                `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ${cfg.sell_target_price})\n` +
-                `🪙 Мин: ${minAmount} | Макс: ${maxAmount}\n` +
+                `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≥${cfg.sell_target_price})\n` +
+                `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
                 `👤 Покупатель: <b>${item.advertiser.nickName}</b>\n` +
                 `⭐ Рейтинг: ${(parseFloat(item.advertiser.monthFinishRate) * 100).toFixed(1)}%\n` +
                 `✅ Онлайн: ${item.advertiser.userNo ? 'Да' : 'Нет'}`;
@@ -169,7 +175,7 @@ async function runMonitoringCheck() {
 
               await sql`
                 INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
-                VALUES ('SELL', ${price}, ${cfg.sell_target_price}, ${item.advertiser.nickName}, ${minAmount}, ${maxAmount}, ${item.advertiser.monthFinishRate}, 1)
+                VALUES ('SELL', ${price}, ${cfg.sell_target_price}, ${item.advertiser.nickName}, ${adMin}, ${adMax}, ${item.advertiser.monthFinishRate}, 1)
               `;
             }
           }

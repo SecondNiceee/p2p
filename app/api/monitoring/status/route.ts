@@ -9,9 +9,11 @@ export async function GET() {
         is_active,
         fiat_currency,
         buy_target_price,
-        buy_fiat_amount,
+        buy_fiat_amount_min,
+        buy_fiat_amount_max,
         sell_target_price,
-        sell_fiat_amount,
+        sell_fiat_amount_min,
+        sell_fiat_amount_max,
         interval_ms
       FROM monitoring_config
       WHERE id = 1
@@ -24,9 +26,11 @@ export async function GET() {
           is_active: false,
           fiat_currency: 'RUB',
           buy_target_price: null,
-          buy_fiat_amount: null,
+          buy_fiat_amount_min: null,
+          buy_fiat_amount_max: null,
           sell_target_price: null,
-          sell_fiat_amount: null,
+          sell_fiat_amount_min: null,
+          sell_fiat_amount_max: null,
           interval_ms: 30000,
         }),
         { status: 200 }
@@ -41,9 +45,11 @@ export async function GET() {
         is_active: false,
         fiat_currency: 'RUB',
         buy_target_price: null,
-        buy_fiat_amount: null,
+        buy_fiat_amount_min: null,
+        buy_fiat_amount_max: null,
         sell_target_price: null,
-        sell_fiat_amount: null,
+        sell_fiat_amount_min: null,
+        sell_fiat_amount_max: null,
         interval_ms: 30000,
       }),
       { status: 200 }

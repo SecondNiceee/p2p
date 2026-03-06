@@ -7,12 +7,16 @@ type Props = {
   setFiatCurrency: (v: string) => void;
   buyTargetPrice: string;
   setBuyTargetPrice: (v: string) => void;
-  buyFiatAmount: string;
-  setBuyFiatAmount: (v: string) => void;
+  buyFiatAmountMin: string;
+  setBuyFiatAmountMin: (v: string) => void;
+  buyFiatAmountMax: string;
+  setBuyFiatAmountMax: (v: string) => void;
   sellTargetPrice: string;
   setSellTargetPrice: (v: string) => void;
-  sellFiatAmount: string;
-  setSellFiatAmount: (v: string) => void;
+  sellFiatAmountMin: string;
+  setSellFiatAmountMin: (v: string) => void;
+  sellFiatAmountMax: string;
+  setSellFiatAmountMax: (v: string) => void;
   interval: number;
   setInterval: (v: number) => void;
   isRunning: boolean;
@@ -33,12 +37,16 @@ export function ControlPanel({
   setFiatCurrency,
   buyTargetPrice,
   setBuyTargetPrice,
-  buyFiatAmount,
-  setBuyFiatAmount,
+  buyFiatAmountMin,
+  setBuyFiatAmountMin,
+  buyFiatAmountMax,
+  setBuyFiatAmountMax,
   sellTargetPrice,
   setSellTargetPrice,
-  sellFiatAmount,
-  setSellFiatAmount,
+  sellFiatAmountMin,
+  setSellFiatAmountMin,
+  sellFiatAmountMax,
+  setSellFiatAmountMax,
   interval,
   setInterval,
   isRunning,
@@ -72,9 +80,11 @@ export function ControlPanel({
           body: JSON.stringify({
             fiatCurrency,
             buyTargetPrice: buyTargetPrice ? parseFloat(buyTargetPrice) : null,
-            buyFiatAmount: buyFiatAmount ? parseFloat(buyFiatAmount) : null,
+            buyFiatAmountMin: buyFiatAmountMin ? parseFloat(buyFiatAmountMin) : null,
+            buyFiatAmountMax: buyFiatAmountMax ? parseFloat(buyFiatAmountMax) : null,
             sellTargetPrice: sellTargetPrice ? parseFloat(sellTargetPrice) : null,
-            sellFiatAmount: sellFiatAmount ? parseFloat(sellFiatAmount) : null,
+            sellFiatAmountMin: sellFiatAmountMin ? parseFloat(sellFiatAmountMin) : null,
+            sellFiatAmountMax: sellFiatAmountMax ? parseFloat(sellFiatAmountMax) : null,
             interval_ms: interval,
           }),
         });
@@ -127,14 +137,23 @@ export function ControlPanel({
         </div>
 
         <div>
-          <label className={labelClass}>Сумма покупки ({fiatCurrency})</label>
-          <input
-            type="number"
-            placeholder="напр. 5000"
-            value={buyFiatAmount}
-            onChange={(e) => setBuyFiatAmount(e.target.value)}
-            className={inputClass}
-          />
+          <label className={labelClass}>Сумма покупки от-до ({fiatCurrency})</label>
+          <div className="flex gap-1">
+            <input
+              type="number"
+              placeholder="от"
+              value={buyFiatAmountMin}
+              onChange={(e) => setBuyFiatAmountMin(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              type="number"
+              placeholder="до"
+              value={buyFiatAmountMax}
+              onChange={(e) => setBuyFiatAmountMax(e.target.value)}
+              className={inputClass}
+            />
+          </div>
         </div>
 
         <div>
@@ -149,14 +168,23 @@ export function ControlPanel({
         </div>
 
         <div>
-          <label className={labelClass}>Сумма продажи ({fiatCurrency})</label>
-          <input
-            type="number"
-            placeholder="напр. 5000"
-            value={sellFiatAmount}
-            onChange={(e) => setSellFiatAmount(e.target.value)}
-            className={inputClass}
-          />
+          <label className={labelClass}>Сумма продажи от-до ({fiatCurrency})</label>
+          <div className="flex gap-1">
+            <input
+              type="number"
+              placeholder="от"
+              value={sellFiatAmountMin}
+              onChange={(e) => setSellFiatAmountMin(e.target.value)}
+              className={inputClass}
+            />
+            <input
+              type="number"
+              placeholder="до"
+              value={sellFiatAmountMax}
+              onChange={(e) => setSellFiatAmountMax(e.target.value)}
+              className={inputClass}
+            />
+          </div>
         </div>
 
         <div>

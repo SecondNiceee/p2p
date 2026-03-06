@@ -10,20 +10,22 @@ type Props = {
 };
 
 export function AlertPanel({ type, items, targetPrice, fiatCurrency }: Props) {
-  const isBuy = type === "BUY";
+  // type="BUY" означает что МЫ хотим КУПИТЬ USDT → ищем SELL объявления с ценой ≤ целевой
+  // type="SELL" означает что МЫ хотим ПРОДАТЬ USDT → ищем BUY объявления с ценой ≥ целевой
+  const isBuyAlert = type === "BUY";
 
   return (
     <div className="rounded-xl border-2 border-emerald-400 bg-emerald-950/60 p-5 animate-pulse-once">
       <div className="flex items-center gap-2 mb-3">
         <span className="inline-flex h-3 w-3 rounded-full bg-emerald-400 animate-ping" />
         <h2 className="text-lg font-bold text-emerald-300">
-          {isBuy ? "АЛЕРТ ПРОДАЖИ (BUY)" : "АЛЕРТ ПОКУПКИ (SELL)"} — Целевая цена достигнута!
+          {isBuyAlert ? "АЛЕРТ ПОКУПКИ" : "АЛЕРТ ПРОДАЖИ"} — Целевая цена достигнута!
         </h2>
       </div>
       <p className="text-sm text-emerald-200 mb-4">
-        {isBuy
-          ? `Найдено ${items.length} BUY объявлений с ценой ≥ ${targetPrice} ${fiatCurrency} — можно продать`
-          : `Найдено ${items.length} SELL объявлений с ценой ≤ ${targetPrice} ${fiatCurrency} — можно купить`}
+        {isBuyAlert
+          ? `Найдено ${items.length} SELL объявлений с ценой ≤ ${targetPrice} ${fiatCurrency} — можно купить USDT`
+          : `Найдено ${items.length} BUY объявлений с ценой ≥ ${targetPrice} ${fiatCurrency} — можно продать USDT`}
       </p>
       <div className="flex flex-col gap-2">
         {items.map((item) => (
