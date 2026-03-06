@@ -6,8 +6,8 @@
     "dev": "next dev",
     "dev:server": "npx tsx server.ts",
     "build": "next build",
-    "start": "next start",
-    "start:server": "node --import tsx server.ts",
+    "start": "node --import tsx server.ts",
+    "start:next": "next start",
     "lint": "eslint ."
   },
   "dependencies": {
