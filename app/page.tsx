@@ -29,9 +29,11 @@ export type OnlineItem = {
 export default function Home() {
   const [fiatCurrency, setFiatCurrency] = useState("RUB");
   const [buyTargetPrice, setBuyTargetPrice] = useState("");
-  const [buyFiatAmount, setBuyFiatAmount] = useState("");
+  const [buyFiatAmountMin, setBuyFiatAmountMin] = useState("");
+  const [buyFiatAmountMax, setBuyFiatAmountMax] = useState("");
   const [sellTargetPrice, setSellTargetPrice] = useState("");
-  const [sellFiatAmount, setSellFiatAmount] = useState("");
+  const [sellFiatAmountMin, setSellFiatAmountMin] = useState("");
+  const [sellFiatAmountMax, setSellFiatAmountMax] = useState("");
   const [interval, setIntervalMs] = useState(5000);
   const [isRunning, setIsRunning] = useState(false);
 
@@ -64,9 +66,11 @@ export default function Home() {
             setIsRunning(true);
             if (data.fiat_currency) setFiatCurrency(data.fiat_currency);
             if (data.buy_target_price) setBuyTargetPrice(String(data.buy_target_price));
-            if (data.buy_fiat_amount) setBuyFiatAmount(String(data.buy_fiat_amount));
+            if (data.buy_fiat_amount_min) setBuyFiatAmountMin(String(data.buy_fiat_amount_min));
+            if (data.buy_fiat_amount_max) setBuyFiatAmountMax(String(data.buy_fiat_amount_max));
             if (data.sell_target_price) setSellTargetPrice(String(data.sell_target_price));
-            if (data.sell_fiat_amount) setSellFiatAmount(String(data.sell_fiat_amount));
+            if (data.sell_fiat_amount_min) setSellFiatAmountMin(String(data.sell_fiat_amount_min));
+            if (data.sell_fiat_amount_max) setSellFiatAmountMax(String(data.sell_fiat_amount_max));
             if (data.interval_ms) setIntervalMs(data.interval_ms);
           }
         }
@@ -134,18 +138,23 @@ export default function Home() {
 
       // SELL объявления = кто продаёт USDT → мы покупаем
       // Алерт покупки: цена SELL объявления <= нашей целевой цены покупки
-      // + сумма в fiat попадает в minAmount..maxAmount объявления
+      // + лимиты объявления пересекаются с нашим диапазоном суммы
       if (sellData.status === "SUCCESS") {
         setSellAds(sellData.data);
         if (buyTargetPrice) {
           const target = parseFloat(buyTargetPrice);
-          const amount = buyFiatAmount ? parseFloat(buyFiatAmount) : null;
+          const ourMin = buyFiatAmountMin ? parseFloat(buyFiatAmountMin) : null;
+          const ourMax = buyFiatAmountMax ? parseFloat(buyFiatAmountMax) : null;
           const matched = sellData.data.filter((item: OnlineItem) => {
             if (parseFloat(item.price) > target) return false;
-            if (amount !== null) {
-              const min = parseFloat(item.minAmount);
-              const max = item.maxAmount ? parseFloat(item.maxAmount) : Infinity;
-              if (amount < min || amount > max) return false;
+            // Проверяем пересечение диапазонов
+            if (ourMin !== null || ourMax !== null) {
+              const adMin = parseFloat(item.minAmount);
+              const adMax = item.maxAmount ? parseFloat(item.maxAmount) : Infinity;
+              // Наш диапазон должен пересекаться с диапазоном объявления
+              const effectiveOurMin = ourMin ?? 0;
+              const effectiveOurMax = ourMax ?? Infinity;
+              if (effectiveOurMax < adMin || effectiveOurMin > adMax) return false;
             }
             return true;
           });
@@ -166,18 +175,22 @@ export default function Home() {
 
       // BUY объявления = кто хочет купить USDT → мы продаём
       // Алерт продажи: цена BUY объявления >= нашей целевой цены продажи
-      // + сумма в fiat попадает в minAmount..maxAmount объявления
+      // + лимиты объявления пересекаются с нашим диапазоном суммы
       if (buyData.status === "SUCCESS") {
         setBuyAds(buyData.data);
         if (sellTargetPrice) {
           const target = parseFloat(sellTargetPrice);
-          const amount = sellFiatAmount ? parseFloat(sellFiatAmount) : null;
+          const ourMin = sellFiatAmountMin ? parseFloat(sellFiatAmountMin) : null;
+          const ourMax = sellFiatAmountMax ? parseFloat(sellFiatAmountMax) : null;
           const matched = buyData.data.filter((item: OnlineItem) => {
             if (parseFloat(item.price) < target) return false;
-            if (amount !== null) {
-              const min = parseFloat(item.minAmount);
-              const max = item.maxAmount ? parseFloat(item.maxAmount) : Infinity;
-              if (amount < min || amount > max) return false;
+            // Проверяем пересечение диапазонов
+            if (ourMin !== null || ourMax !== null) {
+              const adMin = parseFloat(item.minAmount);
+              const adMax = item.maxAmount ? parseFloat(item.maxAmount) : Infinity;
+              const effectiveOurMin = ourMin ?? 0;
+              const effectiveOurMax = ourMax ?? Infinity;
+              if (effectiveOurMax < adMin || effectiveOurMin > adMax) return false;
             }
             return true;
           });
@@ -204,7 +217,7 @@ export default function Home() {
     } catch (e) {
       setError(String(e));
     }
-  }, [fiatCurrency, buyTargetPrice, buyFiatAmount, sellTargetPrice, sellFiatAmount, sendTelegramAlert]);
+  }, [fiatCurrency, buyTargetPrice, buyFiatAmountMin, buyFiatAmountMax, sellTargetPrice, sellFiatAmountMin, sellFiatAmountMax, sendTelegramAlert]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -248,12 +261,16 @@ export default function Home() {
           setFiatCurrency={setFiatCurrency}
           buyTargetPrice={buyTargetPrice}
           setBuyTargetPrice={setBuyTargetPrice}
-          buyFiatAmount={buyFiatAmount}
-          setBuyFiatAmount={setBuyFiatAmount}
+          buyFiatAmountMin={buyFiatAmountMin}
+          setBuyFiatAmountMin={setBuyFiatAmountMin}
+          buyFiatAmountMax={buyFiatAmountMax}
+          setBuyFiatAmountMax={setBuyFiatAmountMax}
           sellTargetPrice={sellTargetPrice}
           setSellTargetPrice={setSellTargetPrice}
-          sellFiatAmount={sellFiatAmount}
-          setSellFiatAmount={setSellFiatAmount}
+          sellFiatAmountMin={sellFiatAmountMin}
+          setSellFiatAmountMin={setSellFiatAmountMin}
+          sellFiatAmountMax={sellFiatAmountMax}
+          setSellFiatAmountMax={setSellFiatAmountMax}
           interval={interval}
           setInterval={setIntervalMs}
           isRunning={isRunning}
