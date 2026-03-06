@@ -1,0 +1,19 @@
+{
+  "name": "binance-p2p-monitoring",
+  "version": "1.0.0",
+  "description": "Standalone monitoring server for Binance P2P price alerts",
+  "main": "monitoring-server.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node --loader tsx monitoring-server.ts",
+    "dev": "node --loader tsx --watch monitoring-server.ts"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
