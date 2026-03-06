@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 type Props = {
   fiatCurrency: string;
   setFiatCurrency: (v: string) => void;
@@ -43,6 +45,42 @@ export function ControlPanel({
   setIsRunning,
   isAlerted,
 }: Props) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleToggleMonitoring = async () => {
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      if (isRunning) {
+        // Stop monitoring
+        const res = await fetch("/api/monitoring/stop", { method: "POST" });
+        if (!res.ok) throw new Error("Failed to stop monitoring");
+        setIsRunning(false);
+      } else {
+        // Start monitoring
+        const res = await fetch("/api/monitoring/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fiatCurrency,
+            buyTargetPrice: buyTargetPrice ? parseFloat(buyTargetPrice) : null,
+            buyFiatAmount: buyFiatAmount ? parseFloat(buyFiatAmount) : null,
+            sellTargetPrice: sellTargetPrice ? parseFloat(sellTargetPrice) : null,
+            sellFiatAmount: sellFiatAmount ? parseFloat(sellFiatAmount) : null,
+            interval_ms: interval,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to start monitoring");
+        setIsRunning(true);
+      }
+    } catch (e) {
+      setError(String(e));
+      setIsLoading(false);
+    }
+  };
+
   const cardClass = isAlerted
     ? "rounded-xl border border-alert-border bg-alert-card p-5"
     : "rounded-xl border border-border bg-card p-5";
@@ -136,17 +174,23 @@ export function ControlPanel({
         </div>
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <button
-          onClick={() => setIsRunning(!isRunning)}
-          className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all ${
-            isRunning
-              ? "bg-destructive text-white hover:bg-destructive/80"
-              : "bg-emerald-600 text-white hover:bg-emerald-500"
-          }`}
-        >
-          {isRunning ? "Stop" : "Start monitoring"}
-        </button>
+      <div className="mt-4 flex flex-col gap-2">
+        {error && (
+          <div className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive-foreground">{error}</div>
+        )}
+        <div className="flex justify-end">
+          <button
+            onClick={handleToggleMonitoring}
+            disabled={isLoading}
+            className={`rounded-lg px-6 py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
+              isRunning
+                ? "bg-destructive text-white hover:bg-destructive/80"
+                : "bg-emerald-600 text-white hover:bg-emerald-500"
+            }`}
+          >
+            {isLoading ? "..." : isRunning ? "Stop Monitoring" : "Start Monitoring"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -50,6 +50,41 @@ export default function Home() {
   });
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAlertTimeRef = useRef<{ buy: number; sell: number }>({ buy: 0, sell: 0 });
+
+  const sendTelegramAlert = useCallback(async (type: "BUY" | "SELL", items: OnlineItem[], targetPrice: string) => {
+    try {
+      const item = items[0];
+      if (!item) return;
+
+      const message =
+        type === "BUY"
+          ? `🛍️ <b>АЛЕРТ ПОКУПКИ (SELL объявление)</b>\n\n` +
+            `💰 Цена: <b>${item.price} ${item.fiatCurrency}</b> (цель: ${targetPrice})\n` +
+            `🪙 Минимум: ${item.minAmount} | Максимум: ${item.maxAmount || "не указано"}\n` +
+            `👤 Продавец: <b>${item.nickname}</b>\n` +
+            `⭐ Уровень: ${item.merchantLevel}\n` +
+            `✅ Онлайн: ${item.isOnline ? "Да" : "Нет"}\n` +
+            `🔗 <a href="https://t.me/wallet">Перейти</a>\n\n` +
+            `Найдено объявлений: ${items.length}`
+          : `💵 <b>АЛЕРТ ПРОДАЖИ (BUY объявление)</b>\n\n` +
+            `💰 Цена: <b>${item.price} ${item.fiatCurrency}</b> (цель: ${targetPrice})\n` +
+            `🪙 Минимум: ${item.minAmount} | Максимум: ${item.maxAmount || "не указано"}\n` +
+            `👤 Покупатель: <b>${item.nickname}</b>\n` +
+            `⭐ Уровень: ${item.merchantLevel}\n` +
+            `✅ Онлайн: ${item.isOnline ? "Да" : "Нет"}\n` +
+            `🔗 <a href="https://t.me/wallet">Перейти</a>\n\n` +
+            `Найдено объявлений: ${items.length}`;
+
+      await fetch("/api/telegram", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+    } catch (error) {
+      console.error("Failed to send Telegram alert:", error);
+    }
+  }, []);
 
   const fetchPrices = useCallback(async () => {
     try {
@@ -87,7 +122,16 @@ export default function Home() {
             }
             return true;
           });
-          setBuyAlert(matched.length > 0 ? { triggered: true, items: matched } : { triggered: false, items: [] });
+          if (matched.length > 0) {
+            setBuyAlert({ triggered: true, items: matched });
+            const now = Date.now();
+            if (now - lastAlertTimeRef.current.buy > 30000) {
+              lastAlertTimeRef.current.buy = now;
+              sendTelegramAlert("BUY", matched, buyTargetPrice);
+            }
+          } else {
+            setBuyAlert({ triggered: false, items: [] });
+          }
         } else {
           setBuyAlert({ triggered: false, items: [] });
         }
@@ -110,7 +154,16 @@ export default function Home() {
             }
             return true;
           });
-          setSellAlert(matched.length > 0 ? { triggered: true, items: matched } : { triggered: false, items: [] });
+          if (matched.length > 0) {
+            setSellAlert({ triggered: true, items: matched });
+            const now = Date.now();
+            if (now - lastAlertTimeRef.current.sell > 30000) {
+              lastAlertTimeRef.current.sell = now;
+              sendTelegramAlert("SELL", matched, sellTargetPrice);
+            }
+          } else {
+            setSellAlert({ triggered: false, items: [] });
+          }
         } else {
           setSellAlert({ triggered: false, items: [] });
         }
@@ -124,7 +177,7 @@ export default function Home() {
     } catch (e) {
       setError(String(e));
     }
-  }, [fiatCurrency, buyTargetPrice, sellTargetPrice]);
+  }, [fiatCurrency, buyTargetPrice, buyFiatAmount, sellTargetPrice, sellFiatAmount, sendTelegramAlert]);
 
   useEffect(() => {
     if (!isRunning) {
@@ -168,8 +221,12 @@ export default function Home() {
           setFiatCurrency={setFiatCurrency}
           buyTargetPrice={buyTargetPrice}
           setBuyTargetPrice={setBuyTargetPrice}
+          buyFiatAmount={buyFiatAmount}
+          setBuyFiatAmount={setBuyFiatAmount}
           sellTargetPrice={sellTargetPrice}
           setSellTargetPrice={setSellTargetPrice}
+          sellFiatAmount={sellFiatAmount}
+          setSellFiatAmount={setSellFiatAmount}
           interval={interval}
           setInterval={setIntervalMs}
           isRunning={isRunning}
