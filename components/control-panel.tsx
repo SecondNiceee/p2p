@@ -59,6 +59,12 @@ export function ControlPanel({
         if (!res.ok) throw new Error("Failed to stop monitoring");
         setIsRunning(false);
       } else {
+        // Validate before starting
+        if (!buyTargetPrice && !sellTargetPrice) {
+          setError("Set at least one target price");
+          setIsLoading(false);
+          return;
+        }
         // Start monitoring
         const res = await fetch("/api/monitoring/start", {
           method: "POST",
@@ -77,6 +83,7 @@ export function ControlPanel({
       }
     } catch (e) {
       setError(String(e));
+    } finally {
       setIsLoading(false);
     }
   };

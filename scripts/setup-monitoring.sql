@@ -6,36 +6,38 @@ CREATE TABLE IF NOT EXISTS monitoring_config (
   is_active BOOLEAN DEFAULT false,
   
   -- Fiat settings
-  fiat_currency VARCHAR(3) DEFAULT 'RUB',
+  fiat_currency VARCHAR(10) DEFAULT 'RUB',
   
   -- Buy monitoring (SELL ads)
-  buy_enabled BOOLEAN DEFAULT false,
   buy_target_price DECIMAL,
   buy_fiat_amount DECIMAL,
   
   -- Sell monitoring (BUY ads)
-  sell_enabled BOOLEAN DEFAULT false,
   sell_target_price DECIMAL,
   sell_fiat_amount DECIMAL,
   
-  -- Interval in seconds
-  interval_seconds INTEGER DEFAULT 60,
+  -- Interval in milliseconds
+  interval_ms INTEGER DEFAULT 30000,
   
-  -- Telegram settings
-  telegram_chat_id VARCHAR(255),
-  
-  -- Track last alert times to prevent spam
-  last_buy_alert TIMESTAMP,
-  last_sell_alert TIMESTAMP
+  -- Track last check time
+  last_checked_at TIMESTAMP
 );
 
--- Create alert_log table to track sent alerts
+-- Create alert_logs table to track sent alerts
 CREATE TABLE IF NOT EXISTS alert_logs (
   id SERIAL PRIMARY KEY,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  alert_type VARCHAR(50),
-  merchant_nickname VARCHAR(255),
+  type VARCHAR(10),
   price DECIMAL,
-  fiat_currency VARCHAR(3),
-  sent_to_telegram BOOLEAN DEFAULT false
+  target_price DECIMAL,
+  nickname VARCHAR(255),
+  min_amount DECIMAL,
+  max_amount DECIMAL,
+  merchant_level VARCHAR(50),
+  items_count INTEGER
 );
+
+-- Insert default config row if not exists
+INSERT INTO monitoring_config (id, is_active, fiat_currency, interval_ms)
+VALUES (1, false, 'RUB', 30000)
+ON CONFLICT (id) DO NOTHING;
