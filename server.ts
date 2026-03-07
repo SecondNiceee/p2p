@@ -50,7 +50,7 @@ async function sendTelegramAlert(message: string) {
 }
 
 // Fetch P2P data from Wallet API (same as client uses)
-async function fetchP2PData(fiatCurrency: string, side: 'sell' | 'buy') {
+async function fetchP2PData(fiatCurrency: string, side: 'SELL' | 'BUY') {
   const apiKey = process.env.P2P_API_KEY;
   
   if (!apiKey) {
@@ -63,7 +63,7 @@ async function fetchP2PData(fiatCurrency: string, side: 'sell' | 'buy') {
     cryptoCurrency: 'USDT',
     side,
     pageSize: 20,
-    page: 0,
+    page: 1,
   };
 
   console.log('[Monitoring] P2P Request:', JSON.stringify(requestBody, null, 2));
@@ -140,7 +140,7 @@ async function runMonitoringCheck() {
 
     // Fetch SELL ads (for BUY monitoring - user wants to buy, so looks at sell offers)
     if (cfg.buy_target_price) {
-      const data = await fetchP2PData(cfg.fiat_currency, 'sell');
+      const data = await fetchP2PData(cfg.fiat_currency, 'SELL');
       
       if (data?.items) {
         for (const item of data.items) {
@@ -175,7 +175,7 @@ async function runMonitoringCheck() {
 
     // Fetch BUY ads (for SELL monitoring - user wants to sell, so looks at buy offers)
     if (cfg.sell_target_price) {
-      const data = await fetchP2PData(cfg.fiat_currency, 'buy');
+      const data = await fetchP2PData(cfg.fiat_currency, 'BUY');
       
       if (data?.items) {
         for (const item of data.items) {
