@@ -90,7 +90,7 @@ async function fetchP2PData(fiatCurrency: string, side: 'SELL' | 'BUY') {
     }
 
     const data = JSON.parse(responseText);
-    console.log(`[Monitoring] Fetched ${side.toUpperCase()} data: ${data.items?.length || 0} items`);
+    console.log(`[Monitoring] Fetched ${side.toUpperCase()} data: ${data.data?.length || 0} items`);
     return data;
   } catch (error) {
     console.error('[Monitoring] Error fetching P2P data:', error);
@@ -142,11 +142,11 @@ async function runMonitoringCheck() {
     if (cfg.buy_target_price) {
       const data = await fetchP2PData(cfg.fiat_currency, 'SELL');
       
-      if (data?.items) {
-        for (const item of data.items) {
+      if (data?.data) {
+        for (const item of data.data) {
           const price = parseFloat(item.price);
-          const adMin = parseFloat(item.minDealAmount || '0');
-          const adMax = parseFloat(item.maxDealAmount || '999999999');
+          const adMin = parseFloat(item.minAmount || '0');
+          const adMax = parseFloat(item.maxAmount || '999999999');
 
           // Check if our range intersects with ad's range
           const ourMin = cfg.buy_fiat_amount_min ? parseFloat(cfg.buy_fiat_amount_min) : 0;
@@ -158,15 +158,15 @@ async function runMonitoringCheck() {
               `🛍️ <b>АЛЕРТ ПОКУПКИ</b>\n\n` +
               `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≤${cfg.buy_target_price})\n` +
               `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
-              `👤 Продавец: <b>${item.user?.nickname || 'Unknown'}</b>\n` +
-              `⭐ Сделок: ${item.user?.totalDeals || 0}\n` +
-              `✅ Онлайн: ${item.user?.online ? 'Да' : 'Нет'}`;
+              `👤 Продавец: <b>${item.nickname || 'Unknown'}</b>\n` +
+              `⭐ Сделок: ${item.orderNum || 0}\n` +
+              `✅ Онлайн: ${item.isOnline ? 'Да' : 'Нет'}`;
 
             await sendTelegramAlert(message);
 
             await sql`
               INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
-              VALUES ('BUY', ${price}, ${cfg.buy_target_price}, ${item.user?.nickname || 'Unknown'}, ${adMin}, ${adMax}, ${item.user?.totalDeals || 0}, 1)
+              VALUES ('BUY', ${price}, ${cfg.buy_target_price}, ${item.nickname || 'Unknown'}, ${adMin}, ${adMax}, ${item.orderNum || 0}, 1)
             `;
           }
         }
@@ -177,11 +177,11 @@ async function runMonitoringCheck() {
     if (cfg.sell_target_price) {
       const data = await fetchP2PData(cfg.fiat_currency, 'BUY');
       
-      if (data?.items) {
-        for (const item of data.items) {
+      if (data?.data) {
+        for (const item of data.data) {
           const price = parseFloat(item.price);
-          const adMin = parseFloat(item.minDealAmount || '0');
-          const adMax = parseFloat(item.maxDealAmount || '999999999');
+          const adMin = parseFloat(item.minAmount || '0');
+          const adMax = parseFloat(item.maxAmount || '999999999');
 
           // Check if our range intersects with ad's range
           const ourMin = cfg.sell_fiat_amount_min ? parseFloat(cfg.sell_fiat_amount_min) : 0;
@@ -193,15 +193,15 @@ async function runMonitoringCheck() {
               `💵 <b>АЛЕРТ ПРОДАЖИ</b>\n\n` +
               `💰 Цена: <b>${price} ${cfg.fiat_currency}</b> (цель: ≥${cfg.sell_target_price})\n` +
               `🪙 Лимиты объявления: ${adMin} - ${adMax}\n` +
-              `👤 Покупатель: <b>${item.user?.nickname || 'Unknown'}</b>\n` +
-              `⭐ Сделок: ${item.user?.totalDeals || 0}\n` +
-              `✅ Онлайн: ${item.user?.online ? 'Да' : 'Нет'}`;
+              `👤 Покупатель: <b>${item.nickname || 'Unknown'}</b>\n` +
+              `⭐ Сделок: ${item.orderNum || 0}\n` +
+              `✅ Онлайн: ${item.isOnline ? 'Да' : 'Нет'}`;
 
             await sendTelegramAlert(message);
 
             await sql`
               INSERT INTO alert_logs (type, price, target_price, nickname, min_amount, max_amount, merchant_level, items_count)
-              VALUES ('SELL', ${price}, ${cfg.sell_target_price}, ${item.user?.nickname || 'Unknown'}, ${adMin}, ${adMax}, ${item.user?.totalDeals || 0}, 1)
+              VALUES ('SELL', ${price}, ${cfg.sell_target_price}, ${item.nickname || 'Unknown'}, ${adMin}, ${adMax}, ${item.orderNum || 0}, 1)
             `;
           }
         }
